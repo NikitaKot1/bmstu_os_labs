@@ -11,7 +11,9 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <time.h>
+#include <pthread.h>
 
+sigset_t mask;
 
 #define LOCKFILE "/var/run/daemon.pid"
 #define LOCKMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
@@ -63,7 +65,7 @@ void daemonize(const char *cmd)
 
     openlog(cmd, LOG_CONS, LOG_DAEMON);
     if (fd0 != 0 || fd1 != 1 || fd2 != 2) {
-        syslog(LOG_ERR, "ошибочные файловые дескрипторы %d %d %d", fd0, fd1, fd2);
+        syslog(LOG_ERR, "Ошибка stdin, sidout, stderr: %d %d %d", fd0, fd1, fd2);
         exit(1);
     }
 }
@@ -104,37 +106,79 @@ int already_running(void)
     return(0);
 }
 
+void *thr_fn(void *arg)
+{
+    int err, signo;
 
+    for (;;) {
+        err = sigwait(&mask, &signo);
+        if (err != 0) {
+            syslog(LOG_ERR, "ошибка вызова функции sigwait");
+            exit(1);
+        }
+        switch (signo) {
+        case SIGHUP:
+            syslog(LOG_INFO, "Чтение конфигурационного файла");
+
+            break;
+        case SIGTERM:
+            syslog(LOG_INFO, "получен SIGTERM; выход");
+            exit(0);
+        default:
+            syslog(LOG_INFO, "получен непредвиденный сигнал %d\n", signo);
+        }
+    }
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
     time_t t;
-    int fd;
-    int err;
+    int fd, err;
     pthread_t tid;
     char *cmd;
+    struct sigaction sa;
+
+    printf("Login befor daemonize:%s\n", getlogin());
     
     if ((cmd = strrchr(argv[0], '/')) == NULL)
         cmd = argv[0];
     else
         cmd++;
-    printf("before demon\n");
-
-    printf("before demon\n");
+        
     daemonize(cmd);
-    printf("after demon\n");
 
     if (already_running()) {
         syslog(LOG_ERR, "%s: демон уже запущен", cmd);
         exit(1);
     }
 
+    sa.sa_handler = SIG_DFL;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGHUP, &sa, NULL) == -1) {
+        syslog(LOG_ERR, "невозможно восставновить действие SIG_DFL для SIGHUP");
+        exit(1);
+    }
+    sigfillset(&mask);
+    if ((err = pthread_sigmask(SIG_BLOCK, &mask, NULL)) != 0) {
+        syslog(LOG_ERR, "ошибка выполнения операции SIG_BLOCK");
+        exit(1);
+    }
+
+    err = pthread_create(&tid, NULL, thr_fn, 0);
+    if (err != 0) {
+        syslog(LOG_ERR, "невозможно создать поток");
+        exit(1);
+    }
+
+    syslog(LOG_INFO, "Login after daemonize:%s\n", getlogin());
     while (1) {
-        sleep(1);
         t = time(NULL);
         struct tm tm = *localtime(&t);
         syslog(LOG_INFO, "%s: Current time is: %02d:%02d:%02d\n",
                 cmd, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        sleep(1);
     }
     return 0;
 }
