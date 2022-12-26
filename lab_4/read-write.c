@@ -126,6 +126,16 @@ int main()
         }
 	}
 
+    while (1)
+    {
+        semop(sem_id, start_read, 5);
+        srand(getpid());  
+        int sl = 500000 + rand() % 2000000; 
+		printf("\e[1;33mMain Reader %d == %d\e[0m\n", getpid(), *shm_buf);
+        semop(sem_id, stop_read, 1);   
+        usleep(sl);
+    }
+
     for (int i = 0; i < WRITERS_N + READERS_N; ++i) {        
         wait(NULL);
         
@@ -136,8 +146,14 @@ int main()
         }
     }
 
-    if (shmctl(shm_id, IPC_RMID, &shm_desk) == -1)
-        perror("main: shmctl: ");
+    if (shmctl(sem_id, IPC_RMID, &shm_desk) == -1)
+        perror("main: shmctl; ");
+
+    if (semctl(sem_id, 0, IPC_RMID) == -1)
+    {
+        perror("semctl with command IPC_RMID error");
+        exit(1);
+    }
 
     return 0;
 }
