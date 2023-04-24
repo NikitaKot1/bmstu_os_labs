@@ -1,0 +1,1 @@
+cmd_/home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/Module.symvers :=  sed 's/ko$$/o/'  /home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/modules.order | scripts/mod/modpost  -a   -N -o /home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/Module.symvers -e -i Module.symvers -T - 

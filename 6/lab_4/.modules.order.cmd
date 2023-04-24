@@ -1,0 +1,1 @@
+cmd_/home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/modules.order := {   echo /home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/main.ko; :; } > /home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/modules.order

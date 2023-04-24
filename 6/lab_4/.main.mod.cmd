@@ -1,0 +1,1 @@
+cmd_/home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/main.mod := printf '%s\n'   main.o | awk '!x[$$0]++ { print("/home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/"$$0) }' > /home/zorox/Документы/лабы/OS/bmstu_os_labs/lab2_3/main.mod
